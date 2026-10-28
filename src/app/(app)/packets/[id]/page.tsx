@@ -5,6 +5,7 @@ import { billingPackets, billingPacketLines, projects } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { Button, Card, Alert } from "@/components/ui";
 import { formatMinor } from "@/lib/money";
+import { recordAudit } from "@/lib/audit";
 import Link from "next/link";
 
 async function confirmExport(formData: FormData) {
@@ -13,6 +14,7 @@ async function confirmExport(formData: FormData) {
   if (!ctx) redirect("/login");
   const id = String(formData.get("id"));
   await db.update(billingPackets).set({ status: "exported", exportedAt: new Date() }).where(and(eq(billingPackets.id, id), eq(billingPackets.organizationId, ctx.organizationId)));
+  await recordAudit({ organizationId: ctx.organizationId, actorId: ctx.userId, entityType: "billing_packet", entityId: id, eventType: "packet.exported" });
   redirect(`/api/packets/${id}/export?format=html`);
 }
 

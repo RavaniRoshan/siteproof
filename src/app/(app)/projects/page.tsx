@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { projects } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { projectSchema } from "@/lib/validation";
+import { recordAudit } from "@/lib/audit";
 import { Button, Card, Input, Label, Alert } from "@/components/ui";
 import Link from "next/link";
 
@@ -32,6 +33,7 @@ async function createProject(formData: FormData) {
     currency: d.currency,
     timezone: d.timezone,
   });
+  await recordAudit({ organizationId: ctx.organizationId, actorId: ctx.userId, entityType: "project", entityId: id, eventType: "project.created", metadata: { name: d.name } });
   redirect(`/projects/${id}`);
 }
 

@@ -4,6 +4,7 @@ import { db } from "@/lib/db/client";
 import { projects, boqItems, workLogs, variations, evidenceFiles } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { projectSchema, boqSchema, workLogSchema, variationSchema } from "@/lib/validation";
+import { recordAudit } from "@/lib/audit";
 import { Button, Card, Input, Label, Textarea, Select, Alert } from "@/components/ui";
 import Link from "next/link";
 
@@ -24,8 +25,9 @@ async function addBoq(formData: FormData) {
   });
   if (!parsed.success) redirect(`/projects/${projectId}?error=invalid`);
   const d = parsed.data;
+  const boqId = crypto.randomUUID();
   await db.insert(boqItems).values({
-    id: crypto.randomUUID(),
+    id: boqId,
     organizationId: ctx.organizationId,
     projectId: d.projectId,
     sourceReference: d.sourceReference || null,
@@ -36,6 +38,7 @@ async function addBoq(formData: FormData) {
     rateMinorUnits: d.rateMinorUnits ?? null,
     notes: d.notes || null,
   });
+  await recordAudit({ organizationId: ctx.organizationId, actorId: ctx.userId, entityType: "boq_item", entityId: boqId, eventType: "boq_item.created" });
   redirect(`/projects/${projectId}`);
 }
 
@@ -55,8 +58,9 @@ async function addWorkLog(formData: FormData) {
   });
   if (!parsed.success) redirect(`/projects/${projectId}?error=invalid`);
   const d = parsed.data;
+  const wlId = crypto.randomUUID();
   await db.insert(workLogs).values({
-    id: crypto.randomUUID(),
+    id: wlId,
     organizationId: ctx.organizationId,
     projectId: d.projectId,
     boqItemId: d.boqItemId || null,
@@ -67,6 +71,7 @@ async function addWorkLog(formData: FormData) {
     notes: d.notes || null,
     createdBy: ctx.userId,
   });
+  await recordAudit({ organizationId: ctx.organizationId, actorId: ctx.userId, entityType: "work_log", entityId: wlId, eventType: "work_log.created" });
   redirect(`/projects/${projectId}`);
 }
 
@@ -89,8 +94,9 @@ async function addVariation(formData: FormData) {
   });
   if (!parsed.success) redirect(`/projects/${projectId}?error=invalid`);
   const d = parsed.data;
+  const varId = crypto.randomUUID();
   await db.insert(variations).values({
-    id: crypto.randomUUID(),
+    id: varId,
     organizationId: ctx.organizationId,
     projectId: d.projectId,
     boqItemId: d.boqItemId || null,
@@ -104,6 +110,7 @@ async function addVariation(formData: FormData) {
     externalReference: d.externalReference || null,
     createdBy: ctx.userId,
   });
+  await recordAudit({ organizationId: ctx.organizationId, actorId: ctx.userId, entityType: "variation", entityId: varId, eventType: "variation.created", metadata: { status: d.status } });
   redirect(`/projects/${projectId}`);
 }
 
@@ -124,8 +131,9 @@ async function uploadEvidence(formData: FormData) {
     if (f.size > MAX_FILE_BYTES) redirect(`/projects/${projectId}?error=too_big`);
     const buf = Buffer.from(await f.arrayBuffer());
     const { storagePath, size } = saveFile(ctx.organizationId, projectId, buf, f.name);
+    const evId = crypto.randomUUID();
     await db.insert(evidenceFiles).values({
-      id: crypto.randomUUID(),
+      id: evId,
       organizationId: ctx.organizationId,
       projectId,
       workLogId,
@@ -137,6 +145,7 @@ async function uploadEvidence(formData: FormData) {
       sourceKind: "upload",
       createdBy: ctx.userId,
     });
+    await recordAudit({ organizationId: ctx.organizationId, actorId: ctx.userId, entityType: "evidence_file", entityId: evId, eventType: "evidence.uploaded", metadata: { mimeType: f.type, size } });
   }
   redirect(`/projects/${projectId}`);
 }

@@ -3,6 +3,7 @@ import { getAuthContext } from "@/lib/auth/context";
 import { db } from "@/lib/db/client";
 import { variations, projects } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { recordAudit } from "@/lib/audit";
 import { Button, Card, Select } from "@/components/ui";
 import Link from "next/link";
 
@@ -15,7 +16,7 @@ async function updateStatus(formData: FormData) {
   const allowed = ["draft", "approval_requested", "approved", "rejected", "disputed"];
   if (!allowed.includes(status)) redirect("/variations");
   await db.update(variations).set({ status, updatedAt: new Date() }).where(and(eq(variations.id, id), eq(variations.organizationId, ctx.organizationId)));
-  // ensure org scope: re-check
+  await recordAudit({ organizationId: ctx.organizationId, actorId: ctx.userId, entityType: "variation", entityId: id, eventType: "variation.status_changed", metadata: { status } });
   redirect("/variations");
 }
 

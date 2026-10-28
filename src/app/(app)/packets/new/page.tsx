@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { Button, Card, Input, Label, Select } from "@/components/ui";
 import Link from "next/link";
 import { buildPacketLines } from "@/lib/domain/packet";
+import { recordAudit } from "@/lib/audit";
 
 async function createPacket(formData: FormData) {
   "use server";
@@ -91,6 +92,7 @@ async function createPacket(formData: FormData) {
       approvalStateSnapshot: line.approvalStateSnapshot,
     });
   }
+  await recordAudit({ organizationId: ctx.organizationId, actorId: ctx.userId, entityType: "billing_packet", entityId: packetId, eventType: "packet.created", metadata: { projectId, selectedLogs: selectedLogs.length, selectedVars: selectedVars.length } });
   redirect(`/packets/${packetId}`);
 }
 
