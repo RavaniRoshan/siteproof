@@ -8,6 +8,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/tests/setup.ts"],
+    exclude: ["**/node_modules/**", "**/e2e/**"],
     env: { DATABASE_URL: "file:./data/test.db" },
   },
   resolve: { alias: { "@": path.resolve(__dirname, "src") } },
